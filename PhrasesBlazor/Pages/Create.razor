@@ -1,0 +1,619 @@
+﻿@page "/Create"
+
+@inject PhrasesBlazor.Services.PhrasesRepo _repo
+@inject IJSRuntime JsRuntime
+@using PhrasesBlazor.Data;
+
+<PageTitle>Hantera fraser</PageTitle>
+<h1 class="h1Black">
+	<i class="bi bi-chevron-double-left" style="color: darkgoldenrod"></i> Hantera fraser <i class="bi bi-chevron-double-right" style="color: darkgoldenrod"></i>
+</h1>
+@* Filter-inputs för vilken page/app som ska visas *@
+@if (!IsEditing && !IsCreating)
+{
+	<div class="row">
+		@* Labels *@
+		<div class="row mt-4">
+			<label style="color: darkgoldenrod" class="col-4">Applikation</label>
+
+			@if (Model.Application != 0)
+			{
+				<label style="color: darkgoldenrod" class="col-4">Sida</label>
+			}
+
+			@if (Model.Application != 0 && Model.Page != 0)
+			{
+				<label style="color: darkgoldenrod" class="col-4">Språk</label>
+			}
+		</div>
+
+		<div class="row">
+			@* App Selection *@
+			<div class="col-4">
+				<select id="InputBorderBotton90" class="form-select" value=@Model.Application @onchange=OnSelectedAppChanged>
+					<option selected value="">Välj en applikation..</option>
+					@foreach (var app in Applications)
+					{
+						<option value="@app.ApplicationID">@app.ApplicationName</option>
+					}
+				</select>
+			</div>
+
+			@* Page Selection *@
+			@if (Model.Application != 0)
+			{
+				<div class="col-4">
+					<select id="InputBorderBotton90" class="form-select" value=@Model.Page @onchange=OnSelectedPageChanged>
+						<option selected value="">Välj en sida..</option>
+						@foreach (var p in Pages)
+						{
+							<option value="@p.ID">@p.PageName</option>
+						}
+					</select>
+				</div>
+			}
+
+			@if (Model.Application != 0 && Model.Page != 0)
+			{
+				<div class="col-4">
+					<select id="InputBorderBotton90" class="form-select" value=@Model.Culture @onchange=OnSelectedCultureChanged>
+						<option value="">Välj ett språk..</option>
+						@foreach (var c in Cultures)
+						{
+							<option value="@c.Culture">@c.Culture</option>
+						}
+					</select>
+				</div>
+			}
+
+			@* Ny fras knapp *@
+			@if (Model.Application != 0 && Model.Page != 0 && !String.IsNullOrEmpty(Model.Culture))
+			{
+				<div class="d-grid gap-2">
+					<button id="InputBorderUp90" class="btn btn-outline-success bi-plus" @onclick=CreatePhrase>Skapa en ny</button>
+				</div>
+
+			}
+		</div>
+
+	</div>
+
+	@* Preview av existerande fraser enligt val *@
+	@if (Model.Application != 0 && Model.Page != 0 && !String.IsNullOrEmpty(Model.Culture))
+	{
+		<div class="row">
+			<table class="table table-light table-striped mt-2">
+				<thead class="table-light">
+					<tr>
+						<th>Redigera</th>
+						<th>Application</th>
+						<th>Page</th>
+						<th>Culture</th>
+						<th>Element</th>
+						<th>Phrase</th>
+					</tr>
+				</thead>
+
+				<tbody>
+					@foreach (var p in Phrases)
+					{
+						var tmpid = p.PhraseID;
+						<tr>
+							<td>
+								<span class="bi bi-pencil-square text-success" @onclick="() => OnEditClicked(tmpid)"></span>
+								<span class="bi bi-trash text-danger" @onclick="() => OnDeleteClicked(tmpid)"></span>
+							</td>
+							<td>@Applications.Where(o => o.ApplicationID == Model.Application).First().ApplicationName</td>
+							<td>@Pages.Where(o => o.ID == Model.Page).First().PageName</td>
+							<td>@p.Culture</td>
+							<td>@p.Element</td>
+							<td>@p.Phrase</td>
+						</tr>
+					}
+				</tbody>
+			</table>
+		</div>
+	}
+}
+
+@* Meddelanden från editor *@
+@if (!String.IsNullOrEmpty(EditorMessage))
+{
+	<h4>@EditorMessage</h4>
+}
+
+@* Denna borde egentligen wrappa hela sidan, generisk för allt som händer *@
+@if (IsLoading)
+{
+	<div>
+		<p>Arbetar med det..</p>
+		<div class="spinny-loader"></div>
+	</div>
+}
+
+@* Editor för att skapa Phrase *@
+@if (IsCreating)
+{
+
+
+	<div>
+		<h1 class="h1Black">
+			<i class="bi bi-chevron-double-left" style="color: darkgoldenrod"></i> Skapa en ny fras <i class="bi bi-chevron-double-right" style="color: darkgoldenrod"></i>
+		</h1>
+		@* Labels *@
+		<div class="row mt-4">
+			<label style="color: darkgoldenrod" class="col-4">Applikation</label>
+
+			@if (Edit.ApplicationID != 0)
+			{
+				<label style="color: darkgoldenrod" class="col-4">Sida</label>
+			}
+		</div>
+
+		@* Application, Page, Culture *@
+		<div class="row">
+			@* App Selection *@
+			<div class="col-4">
+				<select class="form-select" disabled=@(Edit.PhraseID !=0 ? "true" : "false" ) value=@Edit.ApplicationID @onchange=OnEditApplicationChanged>
+					<option selected value="">Välj en applikation..</option>
+					@foreach (var app in Applications)
+					{
+						<option value="@app.ApplicationID">@app.ApplicationName</option>
+					}
+				</select>
+			</div>
+
+			@* Page Selection *@
+			@if (Edit.ApplicationID != 0)
+			{
+				<div class="col-4">
+					<select class="form-select" disabled=@(Edit.PhraseID !=0 ? "true" : "false" ) value=@Edit.PageID @onchange=OnEditPageChanged>
+						<option selected value="">Välj en sida..</option>
+						@foreach (var p in Pages)
+						{
+							<option value="@p.ID">@p.PageName</option>
+						}
+					</select>
+				</div>
+			}
+
+			@* Culture Selection *@
+			@if (Edit.PageID != 0 && Edit.ApplicationID != 0)
+			{
+				<div class="col-4">
+					<select class="form-select" disabled=@(!String.IsNullOrEmpty(Edit.Culture) ? "true" : "false" ) value=@Edit.Culture @onchange=OnEditCultureChanged>
+						<option value="">Välj en kultur..</option>
+						@foreach (var c in Cultures)
+						{
+							<option value="@c.Culture">@c.Culture</option>
+						}
+					</select>
+				</div>
+			}
+
+		</div>
+
+		@* Phrase-ID/Element/Phrase *@
+		<div class="row mt-2">
+			<label style="color: darkgoldenrod" class="col-2">Element</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.Element" @oninput="@((e) => Edit.Element = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<label style="color: darkgoldenrod" class="col-2">Fras</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.Phrase" @oninput="@((e) => Edit.Phrase = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<label style="color: darkgoldenrod" class="col-2">Orginalfras</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.OrginalPhrase" @oninput="@((e) => Edit.OrginalPhrase = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<label style="color: darkgoldenrod" class="col-2">Beskrivning</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.PhraseDescription" @oninput="@((e) => Edit.PhraseDescription = (string)e.Value)">
+		</div>
+
+		<div class="row mt-2 mb-2 skapaKnapparDiv">
+			<button id="skapaKnapparV" class="btn btn-outline-danger col-2 bi-x" @onclick=OnEditorCancelClicked>Avbryt</button>
+			<button id="skapaKnapparH" class="btn btn-outline-success col-2 bi-check" @onclick=OnCreateSaveClicked>Skapa</button>
+		</div>
+	</div>
+}
+
+@* Editor för att redigera en Phrase *@
+@if (IsEditing)
+{
+	<div>
+		<h2 class="h2">Redigerar @Edit.Element</h2>
+
+		@* Labels *@
+		<div class="row">
+			<label class="col-4">Applikation</label>
+
+			@if (Edit.ApplicationID != 0)
+			{
+				<label class="col-4">Sida</label>
+			}
+		</div>
+
+		@* Application, Page, Culture *@
+		<div class="row">
+			@* App Selection *@
+			<div class="col-4">
+				<select class="form-select" disabled=@(Edit.PhraseID !=0 ? "true" : "false" ) value=@Edit.ApplicationID @onchange=OnEditApplicationChanged>
+					<option selected value="">Välj en applikation..</option>
+					@foreach (var app in Applications)
+					{
+						<option value="@app.ApplicationID">@app.ApplicationName</option>
+					}
+				</select>
+			</div>
+
+			@* Page Selection *@
+			@if (Edit.ApplicationID != 0)
+			{
+				<div class="col-4">
+					<select class="form-select" disabled=@(Edit.PhraseID !=0 ? "true" : "false" ) value=@Edit.PageID @onchange=OnEditPageChanged>
+						<option selected value="">Välj en sida..</option>
+						@foreach (var p in Pages)
+						{
+							<option value="@p.ID">@p.PageName</option>
+						}
+					</select>
+				</div>
+			}
+
+			@* Culture Selection *@
+			@if (Edit.PageID != 0 && Edit.ApplicationID != 0)
+			{
+				<div class="col-4">
+					<select class="form-select" disabled=@(!String.IsNullOrEmpty(Edit.Culture) ? "true" : "false" ) value=@Edit.Culture @onchange=OnEditCultureChanged>
+						<option value="">Välj en kultur..</option>
+						@foreach (var c in Cultures)
+						{
+							<option value="@c.Culture">@c.Culture</option>
+						}
+					</select>
+				</div>
+			}
+
+		</div>
+
+		@* Phrase-ID/Element/Phrase *@
+		<div class="row mt-2">
+			<label style="color: darkgoldenrod" class="col-2">Element</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.Element" @oninput="@((e) => Edit.Element = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<label style="color: darkgoldenrod" class="col-2">Fras</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.Phrase" @oninput="@((e) => Edit.Phrase = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<label style="color: darkgoldenrod" class="col-2">Orginalfras</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.OrginalPhrase" @oninput="@((e) => Edit.OrginalPhrase = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<label style="color: darkgoldenrod" class="col-2">Beskrivning</label>
+			<input id="textRutor" type="text" class="col-2" @bind="@Edit.PhraseDescription" @oninput="@((e) => Edit.PhraseDescription = (string)e.Value)">
+		</div>
+
+		<div class="row">
+			<button class="btn btn-outline-danger col-2 bi-x mt-3" @onclick=OnEditorCancelClicked>Avbryt</button>
+			<button class="btn btn-outline-success col-2 bi-check mt-3" @onclick=OnEditSaveClicked>Spara ändringar</button>
+		</div>
+	</div>
+}
+
+@code {
+	private List<Cultures> Cultures = new();
+	private List<Data.Pages> Pages = new();
+	private List<Applications> Applications = new();
+	private List<Phrases> Phrases = new();
+	private PhrasesVM Model = new();
+	private EditVM Edit = new();
+	private int totalCount;
+	private Phrases tmpPhrase;
+	bool IsLoading = false;
+	bool IsEditing = false;
+	bool IsCreating = false;
+	string EditorMessage = String.Empty;
+
+	// Ladda lite värden för listorna när sidan är redo
+	protected override async Task OnInitializedAsync()
+	{
+		Cultures = await _repo.GetCulturesAsync();
+		Pages = await _repo.GetPagesAsync();
+		Applications = await _repo.GetApplicationsAsync();
+		totalCount = await _repo.GetTotalCountAsync();
+	}
+
+	// Uppdatera Pages när en ny Application valts
+	async void OnSelectedAppChanged(ChangeEventArgs e)
+	{
+		// Nollställ allt och rita om sidan om Application är ovald
+		if (String.IsNullOrEmpty(e.Value.ToString()))
+		{
+			Model.Application = 0;
+			Model.Page = 0;
+			Model.Culture = "";
+			Pages = await _repo.GetPagesAsync(Model.Application);
+			totalCount = await _repo.GetTotalCountAsync();
+			StateHasChanged();
+			return;
+		}
+
+		// Nollställ Page och Culture om Application byts
+		if (Model.Page != 0)
+			Model.Page = 0;
+
+		if (!String.IsNullOrEmpty(Model.Culture))
+			Model.Culture = "";
+
+		// Uppdatera modellens valda app, hämta nya pages för den appen och rita om sidan
+		Model.Application = int.Parse(e.Value.ToString());
+		Pages = await _repo.GetPagesAsync(Model.Application);
+		totalCount = await _repo.GetTotalCountAsync(Model.Application);
+
+		StateHasChanged();
+	}
+
+	// Uppdatera Phrases när en ny Page valts
+	async void OnSelectedPageChanged(ChangeEventArgs e)
+	{
+		if (String.IsNullOrEmpty(e.Value.ToString()))
+		{
+			totalCount = await _repo.GetTotalCountAsync(Model.Application);
+			Model.Page = 0;
+			Model.Culture = "";
+			StateHasChanged();
+			return;
+		}
+
+		Model.Page = int.Parse(e.Value.ToString());
+		Phrases = await _repo.GetPhrasesAsync(Model.Application, Model.Page);
+		totalCount = await _repo.GetTotalCountAsync(Model.Application, Model.Page);
+
+		StateHasChanged();
+	}
+
+	// Uppdatera Phrases till filtrerad lista specifik till en culture när en ny Culture valts
+	async void OnSelectedCultureChanged(ChangeEventArgs e)
+	{
+		if (String.IsNullOrEmpty(e.Value.ToString()))
+		{
+			Phrases = await _repo.GetPhrasesAsync(Model.Application, Model.Page);
+			totalCount = await _repo.GetTotalCountAsync(Model.Application, Model.Page);
+			Model.Culture = "";
+			StateHasChanged();
+			return;
+		}
+
+		Model.Culture = e.Value.ToString();
+		Phrases = await _repo.GetPhrasesAsync(Model.Application, Model.Page, Model.Culture);
+		totalCount = await _repo.GetTotalCountAsync(Model.Application, Model.Page, Model.Culture);
+
+		StateHasChanged();
+	}
+
+	void CreatePhrase()
+	{
+		Edit.created = DateTime.Now;
+		Edit.ApplicationID = Model.Application;
+		Edit.PageID = Model.Page;
+		Edit.Culture = Model.Culture;
+
+		IsCreating = true;
+		StateHasChanged();
+	}
+
+	// Nollställ tillstånd om Avbryt klickats på
+	void OnEditorCancelClicked()
+	{
+		IsEditing = false;
+		IsCreating = false;
+		IsLoading = false;
+		EditorMessage = "";
+		StateHasChanged();
+	}
+
+	async void OnCreateSaveClicked()
+	{
+		if (Edit.PageID == 0 || Edit.ApplicationID == 0 || String.IsNullOrEmpty(Edit.Culture))
+		{
+			EditorMessage = "Sida, applikation och kultur måste väljas.";
+			StateHasChanged();
+			return;
+		}
+
+		if (String.IsNullOrEmpty(Edit.Phrase) || String.IsNullOrEmpty(Edit.Element))
+		{
+			EditorMessage = "Fras och Element måste fyllas i.";
+			StateHasChanged();
+			return;
+		}
+
+		// Kolla om den redan existerar
+		var exists = await _repo.GetPhraseByAppPageElementCultureAsync(Edit.ApplicationID, (int)Edit.PageID, Edit.Element, Edit.Culture);
+
+		if (exists is not null)
+		{
+			EditorMessage = $"Det existerar redan en fras för elementet {Edit.Element} på {Edit.Culture}.";
+			StateHasChanged();
+			return;
+		}
+
+		var createPhrase = new Phrases
+			{
+				created = Edit.created,
+				PageID = Edit.PageID,
+				ApplicationID = Edit.ApplicationID,
+				Culture = Edit.Culture,
+				Phrase = Edit.Phrase,
+				Element = Edit.Element
+			};
+
+		if (!String.IsNullOrEmpty(Edit.OrginalPhrase))
+			createPhrase.OrginalPhrase = Edit.OrginalPhrase;
+
+		if (!String.IsNullOrEmpty(Edit.PhraseDescription))
+			createPhrase.PhraseDescription = Edit.PhraseDescription;
+
+		// Spara till databas och få tillbaka bool
+		var ok = await _repo.CreatePhraseAsync(createPhrase);
+
+		if (ok)
+		{
+			EditorMessage = "Ny fras sparades till databas.";
+
+			// Uppdatera lite innehåll för tabeller
+			Phrases = await _repo.GetPhrasesAsync(Model.Application, Model.Page, Model.Culture);
+		}
+
+		else
+			EditorMessage = "Kunde inte spara frasen till databas.";
+
+		IsCreating = false;
+		StateHasChanged();
+	}
+
+	void OnEditApplicationChanged(ChangeEventArgs e)
+	{
+		if (String.IsNullOrEmpty(e.Value.ToString()))
+		{
+			return;
+		}
+
+		Edit.ApplicationID = int.Parse(e.Value.ToString());
+
+		StateHasChanged();
+	}
+
+	void OnEditPageChanged(ChangeEventArgs e)
+	{
+		if (String.IsNullOrEmpty(e.Value.ToString()))
+		{
+			return;
+		}
+
+		Edit.PageID = int.Parse(e.Value.ToString());
+
+		StateHasChanged();
+	}
+
+	void OnEditCultureChanged(ChangeEventArgs e)
+	{
+		if (String.IsNullOrEmpty(e.Value.ToString()))
+		{
+			return;
+		}
+
+		Edit.Culture = e.Value.ToString();
+
+		StateHasChanged();
+	}
+
+	async void OnEditClicked(int phraseid)
+	{
+		EditorMessage = "";
+
+		var phrase = await _repo.GetPhraseById(phraseid);
+
+		if (phrase is null)
+		{
+			IsEditing = false;
+			EditorMessage = $"Kunde inte hitta ID {phraseid}.";
+			StateHasChanged();
+			return;
+		}
+
+		else
+		{
+			IsEditing = true;
+			EditorMessage = $"Redigerar fras med ID {phraseid}.";
+
+			Edit.created = phrase.created;
+			Edit.PhraseDescription = phrase.PhraseDescription;
+			Edit.Phrase = phrase.Phrase;
+			Edit.PhraseID = phrase.PhraseID;
+			Edit.PageID = phrase.PageID;
+			Edit.ApplicationID = phrase.ApplicationID;
+			Edit.Culture = phrase.Culture;
+			Edit.Element = phrase.Element;
+			Edit.OrginalPhrase = phrase.OrginalPhrase;
+
+			StateHasChanged();
+		}
+	}
+
+	// Spara ändringar till databas
+	async void OnEditSaveClicked()
+	{
+		if (Edit.PhraseID is null)
+		{
+			OnEditorCancelClicked();
+			IsEditing = false;
+			EditorMessage = "Hittade inte phrase med det ID";
+			StateHasChanged();
+			return;
+		}
+
+		var existingPhrase = await _repo.GetPhraseById((int)Edit.PhraseID);
+
+		if (existingPhrase is not null)
+		{
+			var updatedPhrase = new Phrases();
+
+			updatedPhrase.PhraseID = existingPhrase.PhraseID;
+			updatedPhrase.ApplicationID = Edit.ApplicationID;
+			updatedPhrase.PageID = Edit.PageID;
+			updatedPhrase.Culture = Edit.Culture;
+			updatedPhrase.created = existingPhrase.created;
+			updatedPhrase.Phrase = Edit.Phrase;
+			updatedPhrase.OrginalPhrase = Edit.OrginalPhrase;
+			updatedPhrase.PhraseDescription = Edit.PhraseDescription;
+			updatedPhrase.Element = Edit.Element;
+
+			var ok = await _repo.UpdatePhraseAsync(updatedPhrase);
+
+			if (ok)
+				EditorMessage = "Sparade ändringar..";
+
+			else
+				EditorMessage = "Kunde inte spara ändringar.";
+
+			IsEditing = false;
+			StateHasChanged();
+		}
+
+	}
+
+
+	async void OnDeleteClicked(int phraseid)
+	{
+		bool confirmed = await JsRuntime.InvokeAsync<bool>("confirm", "Är du säker på att du vill ta bort denna fras?");
+
+		if (confirmed)
+		{
+			var phrase = await _repo.GetPhraseById(phraseid);
+			if (phrase is not null)
+			{
+				var element = phrase.Element;
+				bool deleted = await _repo.DeletePhrase(phrase.PhraseID);
+
+				if (deleted)
+				{
+					EditorMessage = $"Tog bort frasen {element} med ID {phraseid}.";
+				}
+
+				Phrases = await _repo.GetPhrasesAsync(Model.Application, Model.Page, Model.Culture);
+			}
+
+			StateHasChanged();
+		}
+	}
+
+}

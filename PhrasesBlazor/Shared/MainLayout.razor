@@ -1,0 +1,22 @@
+﻿@inherits LayoutComponentBase
+@using PhrasesBlazor.Pages
+
+<PageTitle>PhrasesBlazor</PageTitle>
+
+<Auth>
+    <div class="page">
+    @*    <div class="sidebar">
+            <NavMenu />
+        </div>*@
+
+        <main style="overflow: hidden;">
+    @*        <div id="page-background-class" class="top-row px-4 theSpace">
+                <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+            </div>*@
+
+            <article style="background-color: #212529;" class="content px-4">
+                @Body
+            </article>
+        </main>
+    </div>
+</Auth>

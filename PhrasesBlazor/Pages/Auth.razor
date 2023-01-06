@@ -1,0 +1,47 @@
+﻿@inject IConfiguration _config
+
+@if (!isValid)
+{
+    <div class="AuthColor p-5">
+        <p style="color: darkgoldenrod">Denna sida kräver ett lösenord för att användas.</p>
+
+        <div>
+            <input type="text" id="pass" @bind="inputText" @oninput="@((e) => inputText = (string)e.Value)" />
+            <button class="btn btn-secondary" @onclick="() => ValidateUser()">Verifiera</button>
+        </div>
+
+        <p class="mb-0 pb-0" style="color: darkgoldenrod;">@Message</p>
+    </div>
+}
+else
+{
+    @ChildContent
+}
+
+@code {
+    string password = "";
+    string inputText = String.Empty;
+    string Message = "";
+    bool isValid = false;
+
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+
+    void ValidateUser()
+    {
+        password = _config.GetValue<string>("Password");
+
+        if (password.Equals(inputText))
+        {
+            isValid = true;
+        }
+
+        else
+        {
+            isValid = false;
+            Message = "Felaktigt lösenord.";
+        }
+
+        StateHasChanged();
+    }
+}
